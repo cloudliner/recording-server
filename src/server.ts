@@ -16,6 +16,7 @@ function recordListener(request: express.Request, response: express.Response) {
   (async() => {
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
+    await page._client.send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: './' });
 
     page.on('console', (c) => {
       console.log(`${c.type()}: ${c.text()}: ${c.args()}`);
@@ -24,6 +25,11 @@ function recordListener(request: express.Request, response: express.Response) {
     await page.goto(`http://localhost:4200/`);
     await page.waitFor(500);
 
+    const recordOnly = await page.$('#record-only');
+    if (recordOnly) {
+      recordOnly.click();
+    }
+    await page.waitFor(500);
     await page.screenshot({path: 'Capture-01-initial.png', fullPage: true});
 
     await page.select('#room', 'test-room');
@@ -50,7 +56,7 @@ function recordListener(request: express.Request, response: express.Response) {
     }
     await page.screenshot({path: 'Capture-05-record-stop.png', fullPage: true});
 
-    await page.waitFor(10000);
+    await page.waitFor(20000);
 
     const download = await page.$('#download');
     if (download) {
