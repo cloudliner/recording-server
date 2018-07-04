@@ -22,7 +22,7 @@ testem.log
 /typings
 
 # screenshot
-Capture-*
+capture-*
 
 # downlaod file
 recorded.webm

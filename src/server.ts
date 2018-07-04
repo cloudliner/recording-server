@@ -1,6 +1,13 @@
 import express = require('express');
 import puppeteer = require('puppeteer');
 
+/*
+declare class puppeteer {
+  dePage {
+  _client: any;
+};
+*/
+
 const server = express();
 const portNumber = 8080;
 
@@ -13,6 +20,7 @@ server.get("/", defaultListener);
 
 function recordListener(request: express.Request, response: express.Response) {
   console.log('Launch Chrome');
+  response.write(`Launch Chrome`);
   (async() => {
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
@@ -23,58 +31,59 @@ function recordListener(request: express.Request, response: express.Response) {
     });
 
     await page.goto(`http://localhost:4200/`);
-    await page.waitFor(500);
 
     const recordOnly = await page.$('#record-only');
     if (recordOnly) {
       recordOnly.click();
     }
-    await page.waitFor(500);
-    await page.screenshot({path: 'Capture-01-initial.png', fullPage: true});
+    await page.screenshot({path: 'capture-01-initial.png', fullPage: true});
+    response.write(`initial`);
 
     await page.select('#room', 'test-room');
-    await page.waitFor(500);
-    await page.screenshot({path: 'Capture-02-select.png', fullPage: true});
+    await page.screenshot({path: 'capture-02-select.png', fullPage: true});
+    response.write(`select`);
 
     const join = await page.$('#join');
     if (join) {
       join.click();
     }
-    await page.waitFor(500);
-    await page.screenshot({path: 'Capture-03-join.png', fullPage: true});
+    await page.screenshot({path: 'capture-03-join.png', fullPage: true});
+    response.write(`join`);
 
     const record = await page.$('#record');
     if (record) {
       record.click();
     }
-    await page.waitFor(500);
-    await page.screenshot({path: 'Capture-04-record-start.png', fullPage: true});
+    await page.screenshot({path: 'capture-04-record-start.png', fullPage: true});
+    response.write(`record-start`);
 
-    await page.waitFor(10000);
+    await page.waitFor(5000);
     if (record) {
       record.click();
     }
-    await page.screenshot({path: 'Capture-05-record-stop.png', fullPage: true});
+    await page.screenshot({path: 'capture-05-record-stop.png', fullPage: true});
+    response.write(`record-stop`);
 
-    await page.waitFor(20000);
+    await page.waitFor('#download');
 
     const download = await page.$('#download');
     if (download) {
       download.click();
     }
-    await page.waitFor(500);
-    await page.screenshot({path: 'Capture-06-download.png', fullPage: true});
+    await page.screenshot({path: 'capture-06-download.png', fullPage: true});
+    response.write(`download`);
 
     const exit = await page.$('#exit');
     if (exit) {
       exit.click();
     }
-    await page.waitFor(500);
-    await page.screenshot({path: 'Capture-07-exit.png', fullPage: true});
+    await page.screenshot({path: 'capture-07-exit.png', fullPage: true});
+    response.write(`exit`);
 
-    console.log('Close Chrome');
     await browser.close();
-    response.send('Launch Chrome');
+    console.log('Close Chrome');
+    response.write(`Close Chrome`);
+    response.end();
   })();
 }
 
