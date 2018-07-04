@@ -18,14 +18,16 @@ server.get("/", defaultListener);
 function recordListener(request: express.Request, response: express.Response) {
   const l = new Logger(response);
   (async() => {
-    await l.log('Launch Chrome');
+    await header(response);
+    await l.log('Launch Chrome', true);
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
+    await page.setViewport({ width: 400, height: 300 });
     l.page = page;
     await page._client.send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: './' });
 
-    page.on('console', (c) => {
-      l.log(`${c.type()}: ${c.text()}: ${c.args()}`);
+    page.on('console', async(c) => {
+      await l.log(`${c.type()}: ${c.text()}: ${c.args()}`);
     });
 
     await page.goto(`http://localhost:4200/`);
@@ -33,48 +35,49 @@ function recordListener(request: express.Request, response: express.Response) {
 
     const recordOnly = await page.$('#record-only');
     if (recordOnly) {
-      recordOnly.click();
+      await recordOnly.click();
     }
-    await l.log('initial', true);
+    await l.log('Initial', true);
 
     await page.select('#room', 'test-room');
-    await l.log('select', true);
+    await l.log('Select', true);
 
     const join = await page.$('#join');
     if (join) {
-      join.click();
+      await join.click();
     }
-    await l.log('join', true);
+    await l.log('Join', true);
 
     const record = await page.$('#record');
     if (record) {
-      record.click();
+      await record.click();
     }
-    await l.log('record-start', true);
+    await l.log('Record Start', true);
 
     await page.waitFor(5000);
     if (record) {
-      record.click();
+      await record.click();
     }
-    await l.log('record-stop', true);
+    await l.log('Record Stop', true);
 
     await page.waitFor('#download');
 
     const download = await page.$('#download');
     if (download) {
-      download.click();
+      await download.click();
     }
-    await l.log('download', true);
+    await l.log('Download', true);
 
     const exit = await page.$('#exit');
     if (exit) {
-      exit.click();
+      await exit.click();
     }
-    await l.log('exit', true);
+    await l.log('Exit', true);
 
     await browser.close();
-    await l.log('Close Chrome');
-    response.end();
+    await l.log('Close Chrome', true);
+    await footer(response);
+    await response.end();
   })();
 }
 
@@ -86,12 +89,26 @@ class Logger {
   constructor(private response: express.Response) { }
 
   async log(message: string, capture = false) {
-    this.response.write(`${(Date.now() - this.startTime) / 1000}: ${message}\n`);
     console.log(message);
+    let style = 'font-weight: bold;';
+    if (! capture) {
+      style = 'font-weight: lighter; font-family: monospace;';
+    }
+    await this.response.write(`<p><span>${(Date.now() - this.startTime) / 1000}:</span> <span style="${style}">${message}</span></p>`);
     if (capture && this.page) {
-      await this.page.screenshot({path: `capture-${++ this.count}-${message}.png`, fullPage: true});
+      const img = await this.page.screenshot({encoding: 'base64', fullPage: true});
+      await this.response.write(`<figure><img src="data:image/png;base64,${img}"><figcaption>${message}</figcaption></figure>`);
     }
   }
+}
+
+async function header(response: express.Response) {
+  await response.writeHead(200, {'Content-Type': 'text/html'});
+  await response.write('<!DOCTYPE html><html><head><title>Test</title></head><body style="font-size: small;">');
+}
+
+async function footer(response: express.Response) {
+  await response.write('</body></html>');
 }
 
 server.get("/record", recordListener);
