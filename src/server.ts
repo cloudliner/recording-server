@@ -25,7 +25,8 @@ function recordListener(request: express.Request, response: express.Response, ur
       const page = await browser.newPage();
       await page.setViewport({ width: 400, height: 300 });
       l.page = page;
-      await page._client.send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: './' });
+      const pageAsAny = page as any;
+      await pageAsAny._client.send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: './' });
 
       page.on('console', async(c) => {
         await l.log(`${c.type()}: ${c.text()}: ${c.args()}`);
