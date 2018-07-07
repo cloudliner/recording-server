@@ -25,4 +25,4 @@ testem.log
 capture-*
 
 # downlaod file
-recorded.webm
+recorded-*.webm

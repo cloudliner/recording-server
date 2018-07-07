@@ -13,11 +13,12 @@ server.get("/", defaultListener);
 
 function recordListener(request: express.Request, response: express.Response, url: string) {
   const l = new Logger(response);
+  let browser: puppeteer.Browser | null = null;
   (async() => {
     try {
       await header(response);
       await l.log('Launch Chrome', false);
-      const browser = await puppeteer.launch({
+      browser = await puppeteer.launch({
         args: ['--no-sandbox']
       });
       const page = await browser.newPage();
@@ -74,7 +75,6 @@ function recordListener(request: express.Request, response: express.Response, ur
       }
       await l.log('Exit', true);
 
-      await browser.close();
       await l.log('Close Chrome', false);
     } catch(e) {
       l.error(e);
@@ -82,6 +82,9 @@ function recordListener(request: express.Request, response: express.Response, ur
         l.error(e.stack);
       }
     } finally {
+      if (browser) {
+        await browser.close();
+      }
       await footer(response);
       await response.end();
     }
@@ -104,7 +107,7 @@ class Logger {
     await this.response.write(`<p><span>${(Date.now() - this.startTime) / 1000}:</span> <span style="${style}">${message}</span></p>`);
     if (capture && this.page && ! this.page.isClosed() ) {
       const img = await this.page.screenshot({encoding: 'base64', fullPage: true});
-      await this.response.write(`<figure><img src="data:image/png;base64,${img}"><figcaption>${message}</figcaption></figure>`);
+      await this.response.write(`<img src="data:image/png;base64,${img}">`);
     }
   }
   async error(message: any) {
