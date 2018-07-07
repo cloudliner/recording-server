@@ -15,69 +15,77 @@ function defaultListener(request: express.Request, response: express.Response) {
 
 server.get("/", defaultListener);
 
-function recordListener(request: express.Request, response: express.Response) {
+function recordListener(request: express.Request, response: express.Response, url: string) {
   const l = new Logger(response);
   (async() => {
-    await header(response);
-    await l.log('Launch Chrome', true);
-    const browser = await puppeteer.launch();
-    const page = await browser.newPage();
-    await page.setViewport({ width: 400, height: 300 });
-    l.page = page;
-    await page._client.send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: './' });
+    try {
+      await header(response);
+      await l.log('Launch Chrome', false);
+      const browser = await puppeteer.launch();
+      const page = await browser.newPage();
+      await page.setViewport({ width: 400, height: 300 });
+      l.page = page;
+      await page._client.send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: './' });
 
-    page.on('console', async(c) => {
-      await l.log(`${c.type()}: ${c.text()}: ${c.args()}`);
-    });
+      page.on('console', async(c) => {
+        await l.log(`${c.type()}: ${c.text()}: ${c.args()}`);
+      });
 
-    await page.goto(`http://localhost:4200/`);
-    await page.waitFor(1000);
+      await page.goto(url);
+      await page.waitFor(1000);
 
-    const recordOnly = await page.$('#record-only');
-    if (recordOnly) {
-      await recordOnly.click();
+      const recordOnly = await page.$('#record-only');
+      if (recordOnly) {
+        await recordOnly.click();
+      }
+      await l.log('Initial', true);
+
+      await page.select('#room', 'test-room');
+      await l.log('Select', true);
+
+      const join = await page.$('#join');
+      if (join) {
+        await join.click();
+      }
+      await l.log('Join', true);
+
+      const record = await page.$('#record');
+      if (record) {
+        await record.click();
+      }
+      await l.log('Record Start', true);
+
+      await page.waitFor(5000);
+      if (record) {
+        await record.click();
+      }
+      await l.log('Record Stop', true);
+
+      await page.waitFor('#download');
+
+      const download = await page.$('#download');
+      if (download) {
+        await download.click();
+      }
+      await l.log('Download', true);
+
+      const exit = await page.$('#exit');
+      if (exit) {
+        await exit.click();
+      }
+      await l.log('Exit', true);
+
+      await browser.close();
+      await l.log('Close Chrome', false);
+    } catch(e) {
+      l.error(e);
+      if (e.stack) {
+        l.error(e.stack);
+      }
+    } finally {
+      await footer(response);
+      await response.end();
     }
-    await l.log('Initial', true);
-
-    await page.select('#room', 'test-room');
-    await l.log('Select', true);
-
-    const join = await page.$('#join');
-    if (join) {
-      await join.click();
-    }
-    await l.log('Join', true);
-
-    const record = await page.$('#record');
-    if (record) {
-      await record.click();
-    }
-    await l.log('Record Start', true);
-
-    await page.waitFor(5000);
-    if (record) {
-      await record.click();
-    }
-    await l.log('Record Stop', true);
-
-    await page.waitFor('#download');
-
-    const download = await page.$('#download');
-    if (download) {
-      await download.click();
-    }
-    await l.log('Download', true);
-
-    const exit = await page.$('#exit');
-    if (exit) {
-      await exit.click();
-    }
-    await l.log('Exit', true);
-
-    await browser.close();
-    await l.log('Close Chrome', true);
-    await footer(response);
-    await response.end();
   })();
 }
 
@@ -95,10 +103,15 @@ class Logger {
       style = 'font-weight: lighter; font-family: monospace;';
     }
     await this.response.write(`<p><span>${(Date.now() - this.startTime) / 1000}:</span> <span style="${style}">${message}</span></p>`);
-    if (capture && this.page) {
+    if (capture && this.page && ! this.page.isClosed() ) {
       const img = await this.page.screenshot({encoding: 'base64', fullPage: true});
       await this.response.write(`<figure><img src="data:image/png;base64,${img}"><figcaption>${message}</figcaption></figure>`);
     }
+  }
+  async error(message: any) {
+    console.error(message);
+    const style = 'font-weight: lighter; font-family: monospace; color: red;';
+    await this.response.write(`<p><span>${(Date.now() - this.startTime) / 1000}:</span> <span style="${style}">${message}</span></p>`);
   }
 }
 
@@ -111,7 +124,16 @@ async function footer(response: express.Response) {
   await response.write('</body></html>');
 }
 
-server.get("/record", recordListener);
+function testRecordListener(request: express.Request, response: express.Response) {
+  return recordListener(request, response, 'http://localhost:4200/');
+}
+function productionRecordListener(request: express.Request, response: express.Response) {
+  return recordListener(request, response, 'https://chrome-recording-208807.firebaseapp.com/');
+}
+
+server.get("/record-test", testRecordListener);
+
+server.get("/record", productionRecordListener);
 
 server.listen(portNumber, () => {
   console.log(`Listening on localhost:${ portNumber }`);
