@@ -1,12 +1,8 @@
 import express = require('express');
 import puppeteer = require('puppeteer');
 
-/*
-declare var puppeteer.Page._client: any;
- */
-
 const server = express();
-const portNumber = 8080;
+const portNumber = process.env.PORT || 8080;
 
 function defaultListener(request: express.Request, response: express.Response) {
   console.log('Hello World!');
@@ -21,7 +17,9 @@ function recordListener(request: express.Request, response: express.Response, ur
     try {
       await header(response);
       await l.log('Launch Chrome', false);
-      const browser = await puppeteer.launch();
+      const browser = await puppeteer.launch({
+        args: ['--no-sandbox']
+      });
       const page = await browser.newPage();
       await page.setViewport({ width: 400, height: 300 });
       l.page = page;

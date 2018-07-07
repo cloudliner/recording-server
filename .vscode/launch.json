@@ -5,10 +5,10 @@
       "type": "node",
       "request": "launch",
       "name": "Server",
-      "program": "${workspaceFolder}/src/server.ts",
+      "program": "${workspaceFolder}/src/app.ts",
       "preLaunchTask": "build",
       "outFiles": [
-        "${workspaceFolder}/dist/server.js"
+        "${workspaceFolder}/dist/app.js"
       ]
     }
   ]
