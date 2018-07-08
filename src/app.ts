@@ -74,13 +74,10 @@ function recordListener(request: express.Request, response: express.Response, ur
       await page.waitFor('#remote-download');   
       const remoteDownload = await page.$('#remote-download');
       const remoteDownloadHref = await page.evaluate(remoteDownload => remoteDownload.href, remoteDownload);
-      // await page.evaluate(async() => {
-        // const remoteDownload = document.querySelector("#remote-download");
-        if (remoteDownloadHref) {
-          await l.log('Remote Downlaod', true);
-          await response.write(`<h2><a href="${remoteDownloadHref}" target="_blank">Download from Firebase Storage</a></h2>`);
-        }
-      // });
+      if (remoteDownloadHref) {
+        await l.log('Remote Downlaod', true);
+        await response.write(`<h2><a href="${remoteDownloadHref}" target="_blank">Download from Firebase Storage</a></h2>`);
+      }
 
       const exit = await page.$('#exit');
       if (exit) {
