@@ -11,7 +11,7 @@ function defaultListener(request: express.Request, response: express.Response) {
 
 server.get("/", defaultListener);
 
-function recordListener(request: express.Request, response: express.Response, url: string) {
+function recordListener(request: express.Request, response: express.Response, url: string, local = false) {
   const l = new Logger(response);
   let browser: puppeteer.Browser | null = null;
   (async() => {
@@ -61,13 +61,26 @@ function recordListener(request: express.Request, response: express.Response, ur
       }
       await l.log('Record Stop', true);
 
-      await page.waitFor('#download');
 
-      const download = await page.$('#download');
-      if (download) {
-        await download.click();
+      if (local) {
+        await page.waitFor('#download');
+        const download = await page.$('#download');
+        if (download) {
+          await download.click();
+        }
+        await l.log('Download', true);  
       }
-      await l.log('Download', true);
+
+      await page.waitFor('#remote-download');   
+      const remoteDownload = await page.$('#remote-download');
+      const remoteDownloadHref = await page.evaluate(remoteDownload => remoteDownload.href, remoteDownload);
+      // await page.evaluate(async() => {
+        // const remoteDownload = document.querySelector("#remote-download");
+        if (remoteDownloadHref) {
+          await l.log('Remote Downlaod', true);
+          await response.write(`<h2><a href="${remoteDownloadHref}" target="_blank">Download from Firebase Storage</a></h2>`);
+        }
+      // });
 
       const exit = await page.$('#exit');
       if (exit) {
@@ -127,7 +140,7 @@ async function footer(response: express.Response) {
 }
 
 function testRecordListener(request: express.Request, response: express.Response) {
-  return recordListener(request, response, 'http://localhost:4200/');
+  return recordListener(request, response, 'http://localhost:4200/', true);
 }
 function productionRecordListener(request: express.Request, response: express.Response) {
   return recordListener(request, response, 'https://chrome-recording-208807.firebaseapp.com/');
