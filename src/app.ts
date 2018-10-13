@@ -55,7 +55,7 @@ function recordListener(request: express.Request, response: express.Response, ur
       }
       await l.log('Record Start', true);
 
-      await page.waitFor(5000);
+      await page.waitFor(60000);
       if (record) {
         await record.click();
       }
